@@ -23,7 +23,7 @@ esac
 TARBALL="hello-cli_${OS_NAME}_${ARCH_NAME}.tar.gz"
 DOWNLOAD_URL="${GITHUB_URL}/${TARBALL}"
 
-INSTALL_DIR="$HOME/.hello-cli/bin"
+INSTALL_DIR="$HOME/.local/bin"
 mkdir -p "$INSTALL_DIR"
 
 echo "Downloading ${DOWNLOAD_URL}..."
@@ -38,30 +38,18 @@ chmod +x "$INSTALL_DIR/hello-cli"
 
 rm /tmp/hello-cli.tar.gz
 
-# Add to PATH if not already present
+# Detect user's login shell via $SHELL env var
 if ! echo "$PATH" | grep -q "$INSTALL_DIR"; then
   echo "Adding $INSTALL_DIR to PATH..."
-  
-  SHELL_RC=""
-  if [ -n "$ZSH_VERSION" ]; then
-    SHELL_RC="$HOME/.zshrc"
-  elif [ -n "$BASH_VERSION" ]; then
-    SHELL_RC="$HOME/.bashrc"
-  else
-    # Default to .profile or common rc files
-    if [ -f "$HOME/.zshrc" ]; then
-      SHELL_RC="$HOME/.zshrc"
-    elif [ -f "$HOME/.bashrc" ]; then
-      SHELL_RC="$HOME/.bashrc"
-    else
-      SHELL_RC="$HOME/.profile"
-    fi
-  fi
 
-  if [ -n "$SHELL_RC" ]; then
-    echo "export PATH=\"\$PATH:$INSTALL_DIR\"" >> "$SHELL_RC"
-    echo "Added to $SHELL_RC. Please restart your shell or run 'source $SHELL_RC'."
-  fi
+  case "$SHELL" in
+    */zsh)  SHELL_RC="$HOME/.zshrc" ;;
+    */bash) SHELL_RC="$HOME/.bashrc" ;;
+    *)      SHELL_RC="$HOME/.profile" ;;
+  esac
+
+  echo "export PATH=\"\$PATH:$INSTALL_DIR\"" >> "$SHELL_RC"
+  echo "Added to $SHELL_RC. Please restart your shell or run 'source $SHELL_RC'."
 fi
 
 echo "Installation complete. Run 'hello-cli' to test."
