@@ -1,5 +1,8 @@
 version: 2
 
+release:
+  prerelease: auto
+
 builds:
   - main: .
     binary: hello-cli

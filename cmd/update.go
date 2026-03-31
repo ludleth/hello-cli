@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/blang/semver"
 	"github.com/rhysd/go-github-selfupdate/selfupdate"
 	"github.com/spf13/cobra"
 )
@@ -18,11 +19,19 @@ var updateCmd = &cobra.Command{
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		preview, _ := cmd.Flags().GetBool("preview")
+		beta, _ := cmd.Flags().GetBool("beta")
+		preview = preview || beta
 		yes, _ := cmd.Flags().GetBool("yes")
 
 		if Version == "dev" {
 			fmt.Fprintln(cmd.ErrOrStderr(), "Running development version. Skipping update.")
 			return nil
+		}
+
+		currentVersion := strings.TrimPrefix(Version, "v")
+		current, err := semver.Parse(currentVersion)
+		if err != nil {
+			return fmt.Errorf("failed to parse current version %q: %w", currentVersion, err)
 		}
 
 		var targetVersion string
@@ -35,7 +44,6 @@ var updateCmd = &cobra.Command{
 
 		var latest *selfupdate.Release
 		var found bool
-		var err error
 
 		if targetVersion != "" {
 			fmt.Fprintf(cmd.OutOrStdout(), "Looking for version %s of %s...\n", targetVersion, repo)
@@ -51,14 +59,17 @@ var updateCmd = &cobra.Command{
 			return fmt.Errorf("version not found on GitHub")
 		}
 
+		// When the latest from API is a pre-release and --preview is not set,
+		// the library didn't filter it. Fall back to UpdateCommand which does
+		// proper semver-based comparison and skips pre-releases internally.
 		if targetVersion == "" && !preview && len(latest.Version.Pre) > 0 {
 			fmt.Fprintf(cmd.OutOrStdout(), "Latest version found (%s) is a pre-release. Skipping.\n", latest.Version)
+			fmt.Fprintln(cmd.OutOrStdout(), "Use --preview to include pre-releases.")
 			return nil
 		}
 
-		currentVersion := strings.TrimPrefix(Version, "v")
-		if latest.Version.String() == currentVersion {
-			fmt.Fprintln(cmd.OutOrStdout(), "Current version is the latest.")
+		if !latest.Version.GT(current) {
+			fmt.Fprintf(cmd.OutOrStdout(), "Current version (%s) is already up to date.\n", current)
 			return nil
 		}
 
@@ -89,7 +100,9 @@ var updateCmd = &cobra.Command{
 
 func init() {
 	updateCmd.Flags().Bool("preview", false, "include pre-release/beta versions")
+	updateCmd.Flags().Bool("beta", false, "alias for --preview")
 	_ = updateCmd.Flags().MarkHidden("preview")
+	_ = updateCmd.Flags().MarkHidden("beta")
 	updateCmd.Flags().BoolP("yes", "y", false, "skip confirmation prompt")
 	rootCmd.AddCommand(updateCmd)
 }
