@@ -15,6 +15,13 @@ import (
 
 const repo = "ludleth/hello-cli"
 
+func newUpdater() *selfupdate.Updater {
+	updater, _ := selfupdate.NewUpdater(selfupdate.Config{
+		Validator: &selfupdate.SHA2Validator{},
+	})
+	return updater
+}
+
 var updateCmd = &cobra.Command{
 	Use:   "update [version]",
 	Short: "Update hello-cli to the latest or specified version",
@@ -52,18 +59,20 @@ var updateCmd = &cobra.Command{
 			}
 		}
 
+		updater := newUpdater()
+
 		var latest *selfupdate.Release
 		var found bool
 
 		if targetVersion != "" {
 			fmt.Fprintf(cmd.OutOrStdout(), "Looking for version %s of %s...\n", targetVersion, repo)
-			latest, found, err = selfupdate.DetectVersion(repo, targetVersion)
+			latest, found, err = updater.DetectVersion(repo, targetVersion)
 		} else if preview {
 			fmt.Fprintf(cmd.OutOrStdout(), "Checking for latest version (including pre-releases) of %s...\n", repo)
 			latest, found, err = detectLatestIncludePrerelease(repo)
 		} else {
 			fmt.Fprintf(cmd.OutOrStdout(), "Checking for latest version of %s...\n", repo)
-			latest, found, err = selfupdate.DetectLatest(repo)
+			latest, found, err = updater.DetectLatest(repo)
 		}
 		if err != nil {
 			return fmt.Errorf("error occurred while detecting version: %w", err)
@@ -108,7 +117,7 @@ var updateCmd = &cobra.Command{
 			return fmt.Errorf("could not locate executable path: %w", err)
 		}
 
-		if err := selfupdate.UpdateTo(latest.AssetURL, exe); err != nil {
+		if err := updater.UpdateTo(latest, exe); err != nil {
 			return fmt.Errorf("error occurred while updating binary: %w", err)
 		}
 		fmt.Fprintf(cmd.OutOrStdout(), "Successfully updated to version %s\n", latest.Version)
@@ -147,7 +156,7 @@ func detectLatestIncludePrerelease(slug string) (*selfupdate.Release, bool, erro
 	if bestTag == "" {
 		return nil, false, nil
 	}
-	return selfupdate.DetectVersion(slug, bestTag)
+	return newUpdater().DetectVersion(slug, bestTag)
 }
 
 func init() {

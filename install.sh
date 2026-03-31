@@ -22,21 +22,40 @@ esac
 
 TARBALL="hello-cli_${OS_NAME}_${ARCH_NAME}.tar.gz"
 DOWNLOAD_URL="${GITHUB_URL}/${TARBALL}"
+CHECKSUM_URL="${GITHUB_URL}/${TARBALL}.sha256"
 
 INSTALL_DIR="$HOME/.local/bin"
+TMP_DIR="$(mktemp -d)" || { echo "Error: failed to create temp directory"; exit 1; }
+cleanup() {
+  if [ -n "$TMP_DIR" ] && [ -d "$TMP_DIR" ] && case "$TMP_DIR" in /tmp/*|/var/folders/*) true;; *) false;; esac; then
+    rm -rf "$TMP_DIR"
+  fi
+}
+trap cleanup EXIT
+
 mkdir -p "$INSTALL_DIR"
 
-echo "Downloading ${DOWNLOAD_URL}..."
-curl -sL -o /tmp/hello-cli.tar.gz "$DOWNLOAD_URL"
+echo "Downloading ${TARBALL}..."
+curl -sL -o "$TMP_DIR/$TARBALL" "$DOWNLOAD_URL"
+curl -sL -o "$TMP_DIR/${TARBALL}.sha256" "$CHECKSUM_URL"
+
+echo "Verifying checksum..."
+EXPECTED=$(awk '{print $1}' "$TMP_DIR/${TARBALL}.sha256")
+if [ -z "$EXPECTED" ]; then
+  echo "Error: checksum file is empty"; exit 1
+fi
+ACTUAL=$(shasum -a 256 "$TMP_DIR/$TARBALL" | awk '{print $1}')
+if [ "$EXPECTED" != "$ACTUAL" ]; then
+  echo "Error: checksum mismatch (expected $EXPECTED, got $ACTUAL)"; exit 1
+fi
+echo "Checksum verified."
 
 echo "Extracting..."
-tar -xzf /tmp/hello-cli.tar.gz -C /tmp hello-cli
+tar -xzf "$TMP_DIR/$TARBALL" -C "$TMP_DIR" hello-cli
 
 echo "Installing to $INSTALL_DIR/hello-cli..."
-mv /tmp/hello-cli "$INSTALL_DIR/hello-cli"
+mv "$TMP_DIR/hello-cli" "$INSTALL_DIR/hello-cli"
 chmod +x "$INSTALL_DIR/hello-cli"
-
-rm /tmp/hello-cli.tar.gz
 
 # Detect user's login shell via $SHELL env var
 if ! echo "$PATH" | grep -q "$INSTALL_DIR"; then
