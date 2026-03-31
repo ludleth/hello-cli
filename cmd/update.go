@@ -68,7 +68,12 @@ var updateCmd = &cobra.Command{
 			return nil
 		}
 
-		if !latest.Version.GT(current) {
+		if latest.Version.EQ(current) {
+			fmt.Fprintf(cmd.OutOrStdout(), "Current version (%s) is already up to date.\n", current)
+			return nil
+		}
+
+		if targetVersion == "" && !latest.Version.GT(current) {
 			fmt.Fprintf(cmd.OutOrStdout(), "Current version (%s) is already up to date.\n", current)
 			return nil
 		}
