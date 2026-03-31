@@ -2,11 +2,13 @@ package cmd
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/blang/semver"
+	"github.com/google/go-github/v30/github"
 	"github.com/rhysd/go-github-selfupdate/selfupdate"
 	"github.com/spf13/cobra"
 )
@@ -48,6 +50,9 @@ var updateCmd = &cobra.Command{
 		if targetVersion != "" {
 			fmt.Fprintf(cmd.OutOrStdout(), "Looking for version %s of %s...\n", targetVersion, repo)
 			latest, found, err = selfupdate.DetectVersion(repo, targetVersion)
+		} else if preview {
+			fmt.Fprintf(cmd.OutOrStdout(), "Checking for latest version (including pre-releases) of %s...\n", repo)
+			latest, found, err = detectLatestIncludePrerelease(repo)
 		} else {
 			fmt.Fprintf(cmd.OutOrStdout(), "Checking for latest version of %s...\n", repo)
 			latest, found, err = selfupdate.DetectLatest(repo)
@@ -101,6 +106,40 @@ var updateCmd = &cobra.Command{
 		fmt.Fprintf(cmd.OutOrStdout(), "Successfully updated to version %s\n", latest.Version)
 		return nil
 	},
+}
+
+// detectLatestIncludePrerelease finds the latest release (including pre-releases)
+// by listing releases via GitHub API, then using DetectVersion for the top one.
+func detectLatestIncludePrerelease(slug string) (*selfupdate.Release, bool, error) {
+	parts := strings.SplitN(slug, "/", 2)
+	client := github.NewClient(nil)
+	rels, _, err := client.Repositories.ListReleases(
+		context.Background(), parts[0], parts[1],
+		&github.ListOptions{PerPage: 20},
+	)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to list releases: %w", err)
+	}
+
+	var best semver.Version
+	var bestTag string
+	for _, rel := range rels {
+		tag := rel.GetTagName()
+		v := strings.TrimPrefix(tag, "v")
+		sv, err := semver.Parse(v)
+		if err != nil {
+			continue
+		}
+		if bestTag == "" || sv.GT(best) {
+			best = sv
+			bestTag = tag
+		}
+	}
+
+	if bestTag == "" {
+		return nil, false, nil
+	}
+	return selfupdate.DetectVersion(slug, bestTag)
 }
 
 func init() {

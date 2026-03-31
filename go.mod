@@ -4,13 +4,13 @@ go 1.25.3
 
 require (
 	github.com/blang/semver v3.5.1+incompatible
+	github.com/google/go-github/v30 v30.1.0
 	github.com/rhysd/go-github-selfupdate v1.2.3
 	github.com/spf13/cobra v1.10.2
 )
 
 require (
 	github.com/golang/protobuf v1.3.2 // indirect
-	github.com/google/go-github/v30 v30.1.0 // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
