@@ -25,6 +25,14 @@ var updateCmd = &cobra.Command{
 		preview = preview || beta
 		yes, _ := cmd.Flags().GetBool("yes")
 
+		if skip := os.Getenv("CLI_SKIP_UPDATE"); skip != "" {
+			switch strings.ToLower(skip) {
+			case "1", "true", "on", "yes":
+				fmt.Fprintln(cmd.ErrOrStderr(), "Update skipped (CLI_SKIP_UPDATE is set).")
+				return nil
+			}
+		}
+
 		if Version == "dev" {
 			fmt.Fprintln(cmd.ErrOrStderr(), "Running development version. Skipping update.")
 			return nil
