@@ -4,9 +4,9 @@ $Repo = "ludleth/hello-cli"
 $ApiUrl = "https://api.github.com/repos/$Repo/releases/latest"
 $Release = Invoke-RestMethod -Uri $ApiUrl
 
-$Asset = $Release.assets | Where-Object { $_.name -match "Windows_x86_64.zip$" }
+$Asset = $Release.assets | Where-Object { $_.name -match "windows_amd64.zip$" }
 if (-not $Asset) {
-    Write-Error "Could not find a Windows x86_64 release."
+    Write-Error "Could not find a Windows amd64 release."
     exit 1
 }
 

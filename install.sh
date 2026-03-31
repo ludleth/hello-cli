@@ -8,13 +8,13 @@ OS="$(uname -s)"
 ARCH="$(uname -m)"
 
 case "$OS" in
-  Linux)  OS_NAME="Linux" ;;
-  Darwin) OS_NAME="Darwin" ;;
+  Linux)  OS_NAME="linux" ;;
+  Darwin) OS_NAME="darwin" ;;
   *)      echo "Unsupported OS: $OS"; exit 1 ;;
 esac
 
 case "$ARCH" in
-  x86_64)  ARCH_NAME="x86_64" ;;
+  x86_64)  ARCH_NAME="amd64" ;;
   aarch64) ARCH_NAME="arm64" ;;
   arm64)   ARCH_NAME="arm64" ;;
   *)       echo "Unsupported architecture: $ARCH"; exit 1 ;;
